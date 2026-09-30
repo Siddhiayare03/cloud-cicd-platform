@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -43,8 +47,8 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 7. Tag Docker image
-      - name: Tag Docker Image
+      # 7. Tag Docker image for Docker Hub
+      - name: Tag Docker Image for Docker Hub
         run: |
           docker tag cloud-cicd-platform:${{ github.sha }} \
             ${{ secrets.DOCKERHUB_USERNAME }}/cloud-cicd-platform:${{ github.sha }}
@@ -52,8 +56,35 @@ jobs:
           docker tag cloud-cicd-platform:${{ github.sha }} \
             ${{ secrets.DOCKERHUB_USERNAME }}/cloud-cicd-platform:latest
 
-      # 8. Push Docker image
-      - name: Push Docker Image
+      # 8. Push Docker image to Docker Hub
+      - name: Push Docker Image to Docker Hub
         run: |
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/cloud-cicd-platform:${{ github.sha }}
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/cloud-cicd-platform:latest
+
+      # 9. Configure AWS credentials using GitHub OIDC
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-south-1
+
+      # 10. Login to Amazon ECR
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # 11. Tag Docker image for ECR
+      - name: Tag Docker Image for ECR
+        run: |
+          docker tag cloud-cicd-platform:${{ github.sha }} \
+            ${{ steps.login-ecr.outputs.registry }}/cloud-cicd-platform:${{ github.sha }}
+
+          docker tag cloud-cicd-platform:${{ github.sha }} \
+            ${{ steps.login-ecr.outputs.registry }}/cloud-cicd-platform:latest
+
+      # 12. Push Docker image to ECR
+      - name: Push Docker Image to ECR
+        run: |
+          docker push ${{ steps.login-ecr.outputs.registry }}/cloud-cicd-platform:${{ github.sha }}
+          docker push ${{ steps.login-ecr.outputs.registry }}/cloud-cicd-platform:latest
