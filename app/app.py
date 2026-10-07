@@ -6,7 +6,7 @@ app = Flask(__name__)
 def home():
     return """
     <h1>🚀 Cloud CI/CD Platform</h1>
-    <h3>Welcome to the Enterprise DevOps Project!</h3>
+    <h3>Welcome to the Automated Cloud CI/CD Platform!</h3>
     <p>This application will be deployed automatically using GitHub Actions.</p>
     """
 
