@@ -89,7 +89,36 @@ jobs:
           docker push ${{ steps.login-ecr.outputs.registry }}/cloud-cicd-platform:${{ github.sha }}
           docker push ${{ steps.login-ecr.outputs.registry }}/cloud-cicd-platform:latest
 
-      # 13. Deploy latest image to EC2 using AWS Systems Manager
+      # 13. Display deployment artifacts
+      - name: Display Build Information
+        run: |
+          echo "========================================"
+          echo "🚀 CLOUD CI/CD BUILD INFORMATION"
+          echo "========================================"
+          echo "Commit SHA:"
+          echo "${{ github.sha }}"
+          echo ""
+          echo "Docker Hub Image:"
+          echo "${{ secrets.DOCKERHUB_USERNAME }}/cloud-cicd-platform:${{ github.sha }}"
+          echo ""
+          echo "ECR Image:"
+          echo "${{ steps.login-ecr.outputs.registry }}/cloud-cicd-platform:${{ github.sha }}"
+          echo ""
+          echo "ECR Latest Image:"
+          echo "${{ steps.login-ecr.outputs.registry }}/cloud-cicd-platform:latest"
+          echo ""
+
+          DIGEST=$(aws ecr describe-images \
+            --repository-name cloud-cicd-platform \
+            --image-ids imageTag=${{ github.sha }} \
+            --query 'imageDetails[0].imageDigest' \
+            --output text)
+
+          echo "ECR Image Digest:"
+          echo "$DIGEST"
+          echo "========================================"
+
+      # 14. Deploy latest image to EC2 using AWS Systems Manager
       - name: Deploy to EC2 via SSM
         run: |
           COMMAND_ID=$(aws ssm send-command \
@@ -129,4 +158,6 @@ jobs:
             exit 1
           fi
 
-          echo "🚀 Deployment successful!"
+          echo "========================================"
+          echo "🚀 DEPLOYMENT SUCCESSFUL"
+          echo "========================================"
