@@ -54,7 +54,7 @@ jobs:
               "aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 443286885922.dkr.ecr.ap-south-1.amazonaws.com",
               "docker pull '"$IMAGE"'",
               "docker rm -f cloud-cicd-platform || true",
-              "docker run -d --name cloud-cicd-platform -p 80:5000 '"$IMAGE"'",
+              "docker run -d --restart unless-stopped --name cloud-cicd-platform -p 80:5000 '"$IMAGE"',
               "sleep 5",
               "curl --fail http://localhost"
             ]' \
