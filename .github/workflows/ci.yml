@@ -35,10 +35,12 @@ jobs:
         run: |
           python -m pytest tests
 
-      # 5. Build Docker image
-      - name: Build Docker Image
-        run: |
-          docker build -t cloud-cicd-platform:${{ github.sha }} .
+      # 5. Run SonarQube analysis
+      - name: SonarQube Analysis
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
       # 6. Login to Docker Hub
       - name: Login to Docker Hub
