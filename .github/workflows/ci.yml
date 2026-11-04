@@ -37,7 +37,6 @@ jobs:
 
       # 5. Run SonarQube Cloud analysis
       - name: SonarQube Analysis
-        if: ${{ vars.RUN_SONARQUBE == 'true' }}
         uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
