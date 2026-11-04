@@ -42,14 +42,19 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
-      # 6. Login to Docker Hub
+      # 6. Build Docker Image
+      - name: Build Docker Image
+        run: |
+          docker build -t cloud-cicd-platform:${{ github.sha }} .
+
+      # 7. Login to Docker Hub
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 7. Tag Docker image for Docker Hub
+      # 8. Tag Docker Image for Docker Hub
       - name: Tag Docker Image for Docker Hub
         run: |
           docker tag cloud-cicd-platform:${{ github.sha }} \
@@ -58,25 +63,25 @@ jobs:
           docker tag cloud-cicd-platform:${{ github.sha }} \
             ${{ secrets.DOCKERHUB_USERNAME }}/cloud-cicd-platform:latest
 
-      # 8. Push Docker image to Docker Hub
+      # 9. Push Docker image to Docker Hub
       - name: Push Docker Image to Docker Hub
         run: |
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/cloud-cicd-platform:${{ github.sha }}
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/cloud-cicd-platform:latest
 
-      # 9. Configure AWS credentials using GitHub OIDC
+      # 10. Configure AWS credentials using GitHub OIDC
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ap-south-1
 
-      # 10. Login to Amazon ECR
+      # 11. Login to Amazon ECR
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # 11. Tag Docker image for ECR
+      # 12. Tag Docker image for ECR
       - name: Tag Docker Image for ECR
         run: |
           docker tag cloud-cicd-platform:${{ github.sha }} \
@@ -85,17 +90,17 @@ jobs:
           docker tag cloud-cicd-platform:${{ github.sha }} \
             ${{ steps.login-ecr.outputs.registry }}/cloud-cicd-platform:latest
 
-      # 12. Push Docker image to ECR
+      # 13. Push Docker image to ECR
       - name: Push Docker Image to ECR
         run: |
           docker push ${{ steps.login-ecr.outputs.registry }}/cloud-cicd-platform:${{ github.sha }}
           docker push ${{ steps.login-ecr.outputs.registry }}/cloud-cicd-platform:latest
 
-      # 13. Display deployment artifacts
+      # 14. Display deployment artifacts
       - name: Display Build Information
         run: |
           echo "========================================"
-          echo "🚀 CLOUD CI/CD BUILD INFORMATION"
+          echo "CLOUD CI/CD BUILD INFORMATION"
           echo "========================================"
           echo "Commit SHA:"
           echo "${{ github.sha }}"
@@ -120,7 +125,7 @@ jobs:
           echo "$DIGEST"
           echo "========================================"
 
-      # 14. Deploy latest image to EC2 using AWS Systems Manager
+      # 15. Deploy latest image to EC2 using AWS Systems Manager
       - name: Deploy to EC2 via SSM
         run: |
           COMMAND_ID=$(aws ssm send-command \
@@ -161,5 +166,5 @@ jobs:
           fi
 
           echo "========================================"
-          echo "🚀 DEPLOYMENT SUCCESSFUL"
+          echo "DEPLOYMENT SUCCESSFUL"
           echo "========================================"
