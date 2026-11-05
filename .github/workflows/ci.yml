@@ -31,9 +31,9 @@ jobs:
           pip install -r app/requirements.txt
 
       # 4. Run tests
-      - name: Run Tests
+      - name: Run Tests with Coverage
         run: |
-          python -m pytest tests
+          python -m pytest tests --cov=app --cov-report=xml --cov-report=term-missing
 
       # 5. Run SonarQube Cloud analysis
       - name: SonarQube Analysis
