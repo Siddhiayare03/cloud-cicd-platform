@@ -134,7 +134,8 @@ jobs:
               "aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 443286885922.dkr.ecr.ap-south-1.amazonaws.com",
               "docker pull 443286885922.dkr.ecr.ap-south-1.amazonaws.com/cloud-cicd-platform:latest",
               "docker rm -f cloud-cicd-platform || true",
-              "docker run -d --name cloud-cicd-platform -p 80:5000 443286885922.dkr.ecr.ap-south-1.amazonaws.com/cloud-cicd-platform:latest",
+              "SECRET=$(aws ssm get-parameter --name /cloud-cicd-platform/FLASK_SECRET_KEY --with-decryption --query Parameter.Value --output text) && docker run -d --name cloud-cicd-platform -p 80:5000 -e FLASK_SECRET_KEY=\"$SECRET\" 443286885922.dkr.ecr.ap-south-1.amazonaws.com/cloud-cicd-platform:latest && unset SECRET",
+
               "sleep 5",
               "curl --fail http://localhost"
             ]' \
