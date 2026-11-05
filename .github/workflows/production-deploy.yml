@@ -35,30 +35,136 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ap-south-1
 
+
       - name: Deploy Release to EC2
         run: |
           VERSION="${{ inputs.version }}"
           IMAGE="443286885922.dkr.ecr.ap-south-1.amazonaws.com/cloud-cicd-platform:${VERSION}"
 
           echo "========================================"
-          echo "🚀 PRODUCTION DEPLOYMENT"
+          echo "PRODUCTION DEPLOYMENT"
           echo "========================================"
           echo "Version: $VERSION"
           echo "Image:   $IMAGE"
+
+          DEPLOY_SCRIPT=$(cat <<'REMOTE_SCRIPT'
+          set -eu
+
+          IMAGE="__IMAGE__"
+          CONTAINER="cloud-cicd-platform"
+          BACKUP="cloud-cicd-platform-backup"
+          BACKUP_EXISTS=false
+
+          rollback() {
+            echo "Deployment failed. Starting rollback..."
+
+            docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+
+            if [ "$BACKUP_EXISTS" = true ]; then
+              docker rename "$BACKUP" "$CONTAINER"
+              docker start "$CONTAINER"
+
+              echo "Previous container restored."
+
+              for attempt in $(seq 1 12); do
+                if curl -fsS http://localhost/health >/dev/null; then
+                  echo "Rollback health check passed."
+                  return 0
+                fi
+                sleep 5
+              done
+
+              echo "WARNING: Previous container was restored but health check failed."
+            else
+              echo "No previous container was available to restore."
+            fi
+
+            return 1
+          }
+
+          echo "Logging in to Amazon ECR..."
+          ECR_PASSWORD=$(aws ecr get-login-password --region ap-south-1)
+          printf '%s' "$ECR_PASSWORD" | docker login --username AWS --password-stdin 443286885922.dkr.ecr.ap-south-1.amazonaws.com
+          unset ECR_PASSWORD
+
+          echo "Pulling requested release..."
+          docker pull "$IMAGE"
+
+          echo "Retrieving application secret..."
+          SECRET=$(aws ssm get-parameter \
+            --name /cloud-cicd-platform/FLASK_SECRET_KEY \
+            --with-decryption \
+            --query Parameter.Value \
+            --output text)
+
+          if [ -z "$SECRET" ]; then
+            echo "Secret retrieval failed."
+            exit 1
+          fi
+
+          docker rm -f "$BACKUP" >/dev/null 2>&1 || true
+
+          if docker inspect "$CONTAINER" >/dev/null 2>&1; then
+            echo "Preserving currently running container..."
+            docker stop "$CONTAINER"
+            docker rename "$CONTAINER" "$BACKUP"
+            BACKUP_EXISTS=true
+          fi
+
+          echo "Starting requested release..."
+
+          if ! docker run -d \
+            --restart unless-stopped \
+            --name "$CONTAINER" \
+            -p 80:5000 \
+            -e "FLASK_SECRET_KEY=$SECRET" \
+            "$IMAGE"; then
+
+            unset SECRET
+            rollback
+            exit 1
+          fi
+
+          unset SECRET
+
+          echo "Checking application health..."
+
+          HEALTHY=false
+
+          for attempt in $(seq 1 12); do
+            if curl -fsS http://localhost/health >/dev/null; then
+              HEALTHY=true
+              echo "Health check passed on attempt $attempt."
+              break
+            fi
+
+            echo "Attempt $attempt failed. Retrying in 5 seconds..."
+            sleep 5
+          done
+
+          if [ "$HEALTHY" != true ]; then
+            echo "New release failed its health check."
+            docker logs "$CONTAINER" || true
+            rollback
+            exit 1
+          fi
+
+          if [ "$BACKUP_EXISTS" = true ]; then
+            echo "Removing previous container backup..."
+            docker rm -f "$BACKUP"
+          fi
+
           echo "========================================"
+          echo "PRODUCTION DEPLOYMENT SUCCESSFUL"
+          echo "Version: $IMAGE"
+          echo "========================================"
+          REMOTE_SCRIPT
+          )
 
           PARAMS=$(jq -n \
             --arg image "$IMAGE" \
-            '{
-              commands: [
-                "aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 443286885922.dkr.ecr.ap-south-1.amazonaws.com",
-                ("docker pull " + $image),
-                "docker rm -f cloud-cicd-platform || true",
-                ("SECRET=$(aws ssm get-parameter --name /cloud-cicd-platform/FLASK_SECRET_KEY --with-decryption --query Parameter.Value --output text) && docker run -d --restart unless-stopped --name cloud-cicd-platform -p 80:5000 -e FLASK_SECRET_KEY=\"$SECRET\" " + $image + " && unset SECRET"),
-                "sleep 5",
-                "curl --fail http://localhost"
-              ]
-            }')
+            --arg script "$DEPLOY_SCRIPT" \
+            '{commands: [$script | gsub("__IMAGE__"; $image)]}')
 
           COMMAND_ID=$(aws ssm send-command \
             --document-name "AWS-RunShellScript" \
@@ -82,7 +188,7 @@ jobs:
           echo "Deployment status: $STATUS"
 
           if [ "$STATUS" != "Success" ]; then
-            echo "❌ Production deployment failed."
+            echo "Production deployment failed."
 
             aws ssm get-command-invocation \
               --command-id "$COMMAND_ID" \
@@ -90,6 +196,7 @@ jobs:
 
             exit 1
           fi
+
 
           echo "========================================"
           echo "✅ PRODUCTION DEPLOYMENT SUCCESSFUL"
