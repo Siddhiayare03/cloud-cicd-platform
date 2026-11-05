@@ -32,6 +32,8 @@ jobs:
 
       # 4. Run tests
       - name: Run Tests with Coverage
+        env:
+          FLASK_SECRET_KEY: "ci-only-test-secret-do-not-use-in-production"
         run: |
           python -m pytest tests --cov=app --cov-report=xml --cov-report=term-missing
 
