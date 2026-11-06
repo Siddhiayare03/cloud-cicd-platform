@@ -1,24 +1,22 @@
 <div align="center">
 
-<img src="docs/images/project-banner.png" alt="Cloud CI/CD Platform banner" width="100%">
-
 # ☁️ Cloud CI/CD Platform
 
-**Push code → test → analyse → containerize → publish → deploy. Fully automated.**
+**Push code → test → analyse → containerize → publish → deploy → verify → roll back if needed.**
 
-An end-to-end DevOps pipeline built with **GitHub Actions, Docker, SonarQube Cloud and AWS** (ECR, EC2, IAM, OIDC).
+An end-to-end DevOps project that ships a Flask app from GitHub to a running container on **AWS EC2** using **GitHub Actions, Docker, SonarQube Cloud, Amazon ECR, AWS Systems Manager and GitHub OIDC**. No SSH and no long-lived AWS keys.
 
-[![CI](https://github.com/Siddhiayare03/cloud-cicd-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/Siddhiayare03/cloud-cicd-platform/actions/workflows/ci.yml)
-[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=Siddhiyare03_cloud-cicd-platform&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Siddhiyare03_cloud-cicd-platform)
+[![CI/CD](https://github.com/Siddhiayare03/cloud-cicd-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/Siddhiayare03/cloud-cicd-platform/actions/workflows/ci.yml)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=Siddhiayare03_cloud-cicd-platform&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Siddhiayare03_cloud-cicd-platform)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-App-000000?logo=flask&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?logo=docker&logoColor=white)
 ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-CI%2FCD-2088FF?logo=githubactions&logoColor=white)
-![AWS](https://img.shields.io/badge/AWS-ECR_%7C_EC2_%7C_IAM-FF9900?logo=amazonaws&logoColor=white)
+![AWS](https://img.shields.io/badge/AWS-ECR_%7C_EC2_%7C_SSM_%7C_IAM-FF9900?logo=amazonaws&logoColor=white)
 ![SonarQube](https://img.shields.io/badge/SonarQube-Cloud-126ED3?logo=sonarqubecloud&logoColor=white)
 ![Pytest](https://img.shields.io/badge/Tests-Pytest-0A9EDC?logo=pytest&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green)
 
-[Overview](#-overview) · [Architecture](#-architecture) · [Quick Start](#-quick-start) · [Pipeline](#-pipeline-stages) · [AWS](#-aws-integration) · [Roadmap](#-roadmap)
+[Overview](#-overview) · [Architecture](#-architecture) · [Quick Start](#-quick-start) · [Pipeline](#-cicd-pipeline) · [AWS](#-aws-integration) · [Rollback](#-production-deployment-and-rollback) · [Status](#-project-status) · [Screenshots](#-screenshots) · [Roadmap](#-roadmap)
 
 </div>
 
@@ -26,57 +24,67 @@ An end-to-end DevOps pipeline built with **GitHub Actions, Docker, SonarQube Clo
 
 ## 📌 Overview
 
-Manually building apps, running tests, creating Docker images and pushing them to registries is slow and error-prone. This project removes that friction with an automated **CI/CD pipeline** that runs on every push to `main`.
+Instead of manually testing, building, publishing and deploying every change, **GitHub Actions orchestrates the whole delivery process**: from a `git push` to a verified, running container on EC2.
 
-**What happens on each push:**
+### What happens when code is pushed to `main`?
 
-1. 📥 Checks out the source code
+1. 📥 Checks out the latest source code
 2. 🐍 Sets up Python 3.12 and installs dependencies
 3. 🧪 Runs automated tests with **Pytest**
 4. 🔍 Runs static analysis with **SonarQube Cloud**
 5. 🐳 Builds a **Docker** image
-6. 🏷️ Tags it with the **Git SHA** and a **semantic version**
-7. 📦 Publishes it to **Docker Hub** (and **Amazon ECR** via the AWS extension)
-8. 🚀 Supports **EC2** container deployment and release/changelog management
-
-> [!NOTE]
-> Features are marked as complete in the [Project Status](#-project-status) table only after they have been implemented and verified in this repository.
+6. 🏷️ Tags it with the **Git commit SHA** and `latest`
+7. 📦 Publishes to **Docker Hub** and **Amazon ECR**
+8. 🔐 Authenticates with AWS via **GitHub OIDC**
+9. 🛰️ Runs deployment commands on EC2 through **AWS Systems Manager**
+10. 🗝️ Fetches the app secret from **Parameter Store**
+11. 🚀 Starts the updated container and verifies its **health**
 
 ---
 
 ## ✨ Key Features
 
-| | Feature | Details |
+| | Feature | Implementation |
 |---|---|---|
-| ⚙️ | **Automated CI/CD** | Event-driven GitHub Actions workflow |
-| 🧪 | **Automated testing** | Pytest gate before any image is built |
-| 🔍 | **Code quality** | SonarQube Cloud static analysis |
-| 🐳 | **Containerization** | Portable, reproducible Docker images |
-| 🏷️ | **Smart tagging** | `latest`, `<git-sha>`, and `vMAJOR.MINOR.PATCH` |
-| 🔐 | **Keyless AWS auth** | GitHub OIDC → IAM role → temporary credentials |
-| ☁️ | **Cloud registry & compute** | Amazon ECR + Amazon EC2 |
-| 📝 | **Release management** | Versioned releases and changelogs |
+| ⚙️ | Automated CI/CD | GitHub Actions |
+| 🧪 | Automated testing | Pytest + pytest-cov |
+| 🔍 | Code quality | SonarQube Cloud |
+| 🐳 | Containerization | Docker |
+| 🏷️ | Image tagging | Git SHA and `latest` |
+| 📦 | Registries | Docker Hub and Amazon ECR |
+| 🔐 | AWS authentication | GitHub OIDC + IAM |
+| ☁️ | Cloud deployment | Amazon EC2 |
+| 🛰️ | Remote execution | AWS Systems Manager (SSM) |
+| 🗝️ | Secret management | SSM Parameter Store (SecureString) |
+| 🏷️ | Release automation | Git tag-triggered workflow |
+| 🚀 | Production deployment | Manual, version-based |
+| ♻️ | Recovery | Container backup and health-check-based rollback |
 
 ---
 
 ## 🏗️ Architecture
 
 ```mermaid
-flowchart LR
-    Dev["👩‍💻 Developer"] -->|git push| GH["GitHub Repository"]
-    GH --> GA["GitHub Actions"]
+flowchart TD
+    A["👩‍💻 Developer"] --> B["GitHub Repository"]
+    B --> C["GitHub Actions CI/CD"]
 
-    subgraph CI["Continuous Integration"]
-        direction TB
-        T["Pytest"] --> S["SonarQube Cloud"] --> B["Docker Build"] --> TG["Tag: SHA + SemVer"]
-    end
+    C --> D["Python Setup"]
+    D --> E["Pytest"]
+    E --> F["SonarQube Cloud"]
+    F --> G["Docker Build"]
 
-    GA --> CI
-    TG --> DH["Docker Hub"]
-    TG -.->|OIDC| IAM["AWS IAM Role"]
-    IAM --> ECR["Amazon ECR"]
-    ECR --> EC2["Amazon EC2"]
-    EC2 --> APP["🌐 Running Container"]
+    G --> H["Docker Hub"]
+    G --> I["GitHub OIDC"]
+    I --> J["AWS IAM Role"]
+    J --> K["Amazon ECR"]
+
+    K --> L["AWS Systems Manager"]
+    L --> M["Amazon EC2"]
+    M --> N["Docker Container"]
+    N --> O["🌐 Running Flask App"]
+
+    P["SSM Parameter Store"] --> L
 ```
 
 <details>
@@ -84,18 +92,18 @@ flowchart LR
 
 | Component | Responsibility |
 |---|---|
-| GitHub Repository | Source code and version history |
-| GitHub Actions | Orchestrates the pipeline |
-| Pytest | Validates application behaviour |
+| GitHub | Source control and version history |
+| GitHub Actions | CI/CD workflow orchestration |
+| Pytest | Automated application testing |
 | SonarQube Cloud | Static code analysis |
-| Docker | Packages the app into an image |
-| Docker Hub | Public/private image registry |
-| GitHub OIDC | Federated identity between GitHub and AWS |
-| AWS IAM | Least-privilege access control |
-| Amazon ECR | Private image registry in AWS |
-| Amazon EC2 | Compute host for the container |
-
-Docker Hub and Amazon ECR are **independent** publishing paths.
+| Docker | Application containerization |
+| Docker Hub | Container image publishing |
+| GitHub OIDC | Keyless authentication with AWS |
+| AWS IAM | Identity and permission management |
+| Amazon ECR | Private Docker image registry |
+| AWS Systems Manager | Remote EC2 command execution |
+| Parameter Store | Secure application secret storage |
+| Amazon EC2 | Compute for the deployed application |
 
 </details>
 
@@ -103,17 +111,19 @@ Docker Hub and Amazon ECR are **independent** publishing paths.
 
 ## 🧰 Tech Stack
 
-| Layer | Tools |
+| Layer | Technologies |
 |---|---|
-| **Language** | Python 3.12 |
-| **Source control** | Git, GitHub |
-| **CI/CD** | GitHub Actions (YAML, Bash) |
-| **Containers** | Docker |
-| **Testing** | Pytest |
-| **Code quality** | SonarQube Cloud |
-| **Registries** | Docker Hub, Amazon ECR |
-| **Cloud** | AWS (EC2, ECR, IAM) |
-| **Security** | GitHub OIDC, GitHub Secrets |
+| Language | Python 3.12 |
+| Framework | Flask |
+| Source control | Git, GitHub |
+| CI/CD | GitHub Actions |
+| Testing | Pytest, pytest-cov |
+| Code quality | SonarQube Cloud |
+| Containers | Docker |
+| Registries | Docker Hub, Amazon ECR |
+| Cloud | AWS (EC2, ECR, SSM, IAM) |
+| Identity | IAM, GitHub OIDC |
+| Secrets | SSM Parameter Store, GitHub Secrets |
 
 ---
 
@@ -123,20 +133,26 @@ Docker Hub and Amazon ECR are **independent** publishing paths.
 cloud-cicd-platform/
 ├── .github/
 │   └── workflows/
-│       └── ci.yml                 # CI/CD pipeline definition
+│       ├── ci.yml                  # Test, analyse, build, publish, deploy
+│       ├── release.yml             # Tag-triggered release workflow
+│       └── production-deploy.yml   # Manual versioned deploy with rollback
 ├── app/
-│   └── app.py                     # Application entry point
+│   ├── __init__.py
+│   ├── app.py                      # Flask application
+│   └── requirements.txt
 ├── tests/
-│   └── test_app.py                # Pytest test suite
-├── docs/
-│   └── images/                    # Banner, diagrams, screenshots
-├── Dockerfile                     # Container build recipe
-├── requirements.txt               # Python dependencies
-├── sonar-project.properties       # SonarQube Cloud config
-├── .dockerignore
-├── .gitignore
-└── README.md
+│   └── test_app.py
+├── Dockerfile
+├── sonar-project.properties
+├── README.md
+└── .gitignore
 ```
+
+| Workflow | Responsibility |
+|---|---|
+| `ci.yml` | Testing, SonarQube analysis, image publishing and EC2 deployment |
+| `release.yml` | Release workflow triggered by semantic version tags |
+| `production-deploy.yml` | Manual deployment of a chosen version, with health checks and rollback |
 
 ---
 
@@ -144,210 +160,285 @@ cloud-cicd-platform/
 
 ### Prerequisites
 
-- Git
-- Python 3.12
-- Docker Desktop
-- GitHub and Docker Hub accounts
-- AWS account *(only for the AWS integration)*
+Git · Python 3.12 · Docker Desktop · GitHub account · Docker Hub account
 
 ### 1. Clone
 
-```bash
+```powershell
 git clone https://github.com/Siddhiayare03/cloud-cicd-platform.git
 cd cloud-cicd-platform
 ```
 
-### 2. Run locally
+### 2. Set up Python
 
 <details open>
-<summary><b>🐍 Python (virtual environment)</b></summary>
+<summary><b>🪟 Windows PowerShell</b></summary>
 
 ```powershell
-# Windows PowerShell
 python -m venv venv
 .\venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-python app/app.py
-```
-
-```bash
-# macOS / Linux
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python app/app.py
+pip install -r app/requirements.txt
 ```
 
 </details>
 
 <details>
-<summary><b>🐳 Docker</b></summary>
+<summary><b>🐧 macOS / Linux</b></summary>
 
 ```bash
-docker build -t cloud-cicd-platform .
-docker run -d -p 5000:5000 --name cicd-app cloud-cicd-platform
-```
-
-> Adjust the port mapping if your app listens on a different port.
-
-Useful commands:
-
-```bash
-docker images            # list images
-docker ps                # running containers
-docker logs cicd-app     # view logs
-docker stop cicd-app     # stop the container
+python3 -m venv venv
+source venv/bin/activate
+pip install -r app/requirements.txt
 ```
 
 </details>
 
-### 3. Run the tests
+### 3. Configure the Flask secret
+
+The app requires `FLASK_SECRET_KEY`.
+
+```powershell
+# PowerShell
+$env:FLASK_SECRET_KEY = python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
 
 ```bash
-pytest -v
-pytest -v --tb=short     # compact tracebacks
+# macOS / Linux
+export FLASK_SECRET_KEY=$(python -c "import secrets; print(secrets.token_urlsafe(32))")
 ```
+
+> [!WARNING]
+> Never commit production secrets to the repository.
+
+### 4. Run locally
+
+```powershell
+python app/app.py
+```
+
+| URL | Purpose |
+|---|---|
+| `http://localhost:5000` | Application |
+| `http://localhost:5000/health` | Health endpoint |
+
+### 5. Run tests
+
+```powershell
+$env:FLASK_SECRET_KEY = "local-test-secret"
+python -m pytest tests -v --cov=app --cov-report=term-missing
+```
+
+### 6. Run with Docker
+
+```powershell
+docker build -t cloud-cicd-platform .
+
+$env:FLASK_SECRET_KEY = python -c "import secrets; print(secrets.token_urlsafe(32))"
+
+docker run -d `
+  --name cicd-app `
+  -p 5000:5000 `
+  -e "FLASK_SECRET_KEY=$env:FLASK_SECRET_KEY" `
+  cloud-cicd-platform
+```
+
+<details>
+<summary><b>🔧 Useful Docker commands</b></summary>
+
+```powershell
+docker ps
+docker images
+docker logs cicd-app
+docker stop cicd-app
+docker rm cicd-app
+```
+
+</details>
 
 ---
 
-## 🔄 Pipeline Stages
+## 🔄 CI/CD Pipeline
 
-```text
- push ─▶ checkout ─▶ setup python ─▶ install deps ─▶ pytest ─▶ sonarqube
-                                                                    │
-   release ◀─ ECR / EC2 deploy ◀─ push to Docker Hub ◀─ tag ◀─ docker build
-```
+The main workflow triggers on pushes to `main`.
 
-| # | Stage | Purpose | Fails the build if… |
+| # | Stage | Operation | Purpose |
 |---|---|---|---|
-| 1 | **Checkout** | Fetch latest source | Repo is unreachable |
-| 2 | **Environment setup** | Install Python 3.12 + dependencies | Dependency resolution fails |
-| 3 | **Test** | Run `pytest -v` | Any test fails |
-| 4 | **Static analysis** | SonarQube Cloud scan | Analysis or quality gate fails |
-| 5 | **Build** | `docker build` from `Dockerfile` | Build error |
-| 6 | **Tag** | Apply `latest`, `<git-sha>`, `vX.Y.Z` | Version cannot be resolved |
-| 7 | **Publish** | Push image to Docker Hub | Auth or push error |
-| 8 | **Cloud deploy** | Push to ECR and run on EC2 | OIDC/IAM or deploy error |
-| 9 | **Release** | Generate release and changelog | Release step fails |
+| 1 | Checkout | GitHub checkout | Fetch repository code |
+| 2 | Setup | Python 3.12 | Prepare the environment |
+| 3 | Dependencies | `pip install` | Install app dependencies |
+| 4 | Testing | Pytest | Validate behaviour |
+| 5 | Code analysis | SonarQube Cloud | Analyse code quality |
+| 6 | Build | Docker | Build the app image |
+| 7 | Tag | Git SHA + `latest` | Identify the image |
+| 8 | Publish | Docker Hub + ECR | Store container images |
+| 9 | Authenticate | GitHub OIDC | Get temporary AWS credentials |
+| 10 | Deploy | AWS SSM + EC2 | Run the container |
+| 11 | Verify | `/health` endpoint | Confirm availability |
 
-### 🏷️ Image tagging strategy
+### 🏷️ Image tagging
 
 ```text
 cloud-cicd-platform:latest        # most recent main build
-cloud-cicd-platform:<git-sha>     # exact commit, fully traceable
-cloud-cicd-platform:v1.0.0        # semantic version release
+cloud-cicd-platform:<git-sha>     # exact source commit
+cloud-cicd-platform:v1.0.2        # semantic-version release
 ```
-
-Semantic versioning follows `MAJOR.MINOR.PATCH` (breaking · feature · fix).
 
 ---
 
-## 🔍 SonarQube Cloud
+## 🏷️ Release Management
 
-Configured in `sonar-project.properties`:
+The release workflow runs when a semantic version tag is pushed:
 
-```properties
-sonar.projectKey=Siddhiyare03_cloud-cicd-platform
-sonar.organization=siddhiayare03
-sonar.sources=app
-sonar.tests=tests
-sonar.python.version=3.12
+```powershell
+git tag v1.0.3
+git push origin v1.0.3
 ```
 
-It reports bugs, code smells and security-related findings. `SONAR_TOKEN` lives in GitHub Secrets and is never committed.
+It is designed to:
+
+1. Build the Docker image
+2. Tag it with the release version and Git SHA
+3. Publish to Docker Hub and Amazon ECR
+4. Create a GitHub Release with generated notes
+
+> [!NOTE]
+> Release workflow execution should be verified separately before treating the full release process as production-tested.
 
 ---
 
 ## ☁️ AWS Integration
 
-### Keyless authentication with GitHub OIDC
+### 1. Keyless auth with GitHub OIDC
 
 No long-lived AWS access keys are stored in GitHub.
 
 ```mermaid
 sequenceDiagram
-    participant GA as GitHub Actions
-    participant OIDC as GitHub OIDC Provider
-    participant IAM as AWS IAM
-    participant ECR as Amazon ECR
-    GA->>OIDC: Request identity token
-    OIDC-->>GA: Signed JWT
-    GA->>IAM: AssumeRoleWithWebIdentity
-    IAM-->>GA: Temporary credentials
-    GA->>ECR: Authenticate and push image
+    participant G as GitHub Actions
+    participant O as GitHub OIDC
+    participant I as AWS IAM
+    participant E as Amazon ECR
+
+    G->>O: Request identity token
+    O-->>G: Signed JWT
+    G->>I: AssumeRoleWithWebIdentity
+    I-->>G: Temporary AWS credentials
+    G->>E: Authenticate and publish image
 ```
 
-The IAM role needs a trust policy scoped to this repository and **only** the permissions the workflow requires (least privilege).
+The IAM trust policy should restrict access to the intended repository and workflow context.
 
-### Amazon ECR: push flow
+### 2. Amazon ECR
 
-1. Build the image
-2. Assume the IAM role via OIDC
-3. Log Docker in to ECR
-4. Tag with the ECR repository URI
-5. Push
+| Setting | Value |
+|---|---|
+| Repository | `cloud-cicd-platform` |
+| Region | `ap-south-1` |
 
-### Amazon EC2: deploy flow
+### 3. EC2 deployment
 
-1. Provision an EC2 instance and configure the security group
-2. Install Docker
-3. Authenticate to ECR
-4. Pull the image
-5. Run the container
-6. Verify the application is reachable
+1. GitHub Actions assumes the IAM role
+2. Sends a deployment command through AWS Systems Manager
+3. EC2 authenticates with ECR
+4. EC2 pulls the requested image
+5. EC2 retrieves the secret from Parameter Store
+6. Docker starts the updated container
+7. The health endpoint is checked
+
+The app is exposed on **port 80** of the EC2 instance, forwarded by Docker to **port 5000** in the container.
+
+### 4. AWS Systems Manager
+
+**Run Command** executes deployment steps remotely, so GitHub Actions doesn't need SSH access to the instance.
+
+### 5. Secret management
+
+The production Flask secret is a `SecureString` in Parameter Store:
+
+```text
+/cloud-cicd-platform/FLASK_SECRET_KEY
+```
+
+The EC2 instance reads it at deploy time through its **IAM instance profile** and injects it into the container as an environment variable. It is never baked into the Docker image.
+
+---
+
+## 🔁 Production Deployment and Rollback
+
+A separate, **manually triggered** workflow deploys a chosen release (for example `v1.0.2`).
+
+### Deployment steps
+
+1. Validate the semantic version
+2. Authenticate with AWS via OIDC
+3. Pull the requested version from ECR
+4. Retrieve the production secret from Parameter Store
+5. Preserve the existing container
+6. Start the requested release
+7. Check `/health`
+8. Remove the previous container after successful verification
+
+### Automatic rollback
+
+```mermaid
+flowchart TD
+    A["Existing app running"] --> B["Preserve old container"]
+    B --> C["Start new release"]
+    C --> D{"Health check"}
+    D -->|Pass| E["Remove backup container"]
+    D -->|Fail| F["Remove new container"]
+    F --> G["Restore old container"]
+    G --> H{"Health check"}
+    H -->|Pass| I["Service restored"]
+    H -->|Fail| J["Manual intervention"]
+```
+
+Rollback uses Docker container stop, rename, remove and start operations.
+
+> [!IMPORTANT]
+> The rollback logic is implemented, but **deliberate failure-based rollback testing is not complete yet**. Replacing the container can also cause **brief downtime**.
 
 ---
 
 ## 🔐 Configuration and Secrets
 
-Add these under **Settings → Secrets and variables → Actions**:
+### GitHub Actions secrets
+
+Add them under **Repository → Settings → Secrets and variables → Actions**:
 
 | Secret | Purpose |
 |---|---|
 | `DOCKERHUB_USERNAME` | Docker Hub username |
 | `DOCKERHUB_TOKEN` | Docker Hub access token |
-| `SONAR_TOKEN` | SonarQube Cloud analysis token |
+| `SONAR_TOKEN` | SonarQube Cloud authentication |
+| `AWS_ROLE_ARN` | IAM role assumed through OIDC |
+| `EC2_INSTANCE_ID` | Target EC2 instance ID |
 
-AWS access uses an **IAM role + OIDC**, so no AWS keys are required.
-
-> [!WARNING]
-> Never commit tokens, passwords, private keys or cloud credentials.
+The production app secret lives separately in AWS Parameter Store.
 
 ### Security practices
 
-- ✅ Secrets stored in GitHub Actions secrets
-- ✅ OIDC preferred over static AWS keys
-- ✅ Least-privilege IAM permissions
-- ✅ No hardcoded credentials
+- ✅ GitHub OIDC instead of long-lived AWS keys
+- ✅ IAM roles with scoped permission policies
+- ✅ `SecureString` for the production app secret
+- ✅ No production secrets in source control
 - ✅ Static analysis on every push
-- ✅ Traceable, versioned images
+- ✅ Traceable, SHA-tagged images
+- ✅ No SSH-based deployment
 
 ---
 
-## 📸 Screenshots
+## 🔍 SonarQube Cloud
 
-| GitHub Actions | Pytest |
-|:---:|:---:|
-| ![Actions](docs/images/github-actions-success.png) | ![Pytest](docs/images/pytest-results.png) |
+Analysis runs in CI and is configured in `sonar-project.properties`. It reports:
 
-| SonarQube | Docker Hub |
-|:---:|:---:|
-| ![Sonar](docs/images/sonar-analysis.png) | ![Docker Hub](docs/images/docker-hub.png) |
+- 🐞 Bugs
+- 👃 Code smells
+- 🔒 Security-related findings
+- 🧹 Maintainability issues
+- 🛡️ Reliability issues
 
-| Amazon ECR | EC2 Instance |
-|:---:|:---:|
-| ![ECR](docs/images/aws-ecr.png) | ![EC2](docs/images/ec2-instance.png) |
-
-<details>
-<summary><b>🖼️ More screenshots</b></summary>
-
-![Architecture](docs/images/architecture.png)
-![Docker images](docs/images/docker-images.png)
-![Deployed app](docs/images/deployed-application.png)
-
-</details>
-
-> Replace or remove any image that doesn't exist yet so the README has no broken links.
+Authentication uses the `SONAR_TOKEN` GitHub Actions secret.
 
 ---
 
@@ -355,61 +446,119 @@ AWS access uses an **IAM role + OIDC**, so no AWS keys are required.
 
 | Capability | Status |
 |---|---|
-| GitHub Actions CI workflow | ✅ Done |
-| Pytest automated tests | ✅ Done |
-| Docker image build | ✅ Done |
-| Git SHA + semantic version tagging | ✅ Done |
-| Docker Hub publishing | ✅ Done |
-| SonarQube Cloud analysis | 🔄 Verify and update |
-| AWS ECR push via OIDC | 🔄 Verify and update |
-| EC2 deployment | 🔄 Verify and update |
-| Release and changelog automation | 🔄 Verify and update |
+| GitHub Actions CI/CD | ✅ Implemented |
+| Pytest automated testing | ✅ Implemented |
+| Docker image build | ✅ Verified |
+| Docker Hub publishing | ✅ Verified |
+| SonarQube Cloud analysis | ✅ Verified |
+| AWS OIDC authentication | ✅ Implemented |
+| Amazon ECR publishing | ✅ Verified |
+| EC2 container deployment | ✅ Verified |
+| AWS SSM remote deployment | ✅ Verified |
+| Parameter Store secret retrieval | ✅ Implemented |
+| Production health checks | ✅ Verified |
+| Version-based deployment workflow | ⚙️ Configured |
+| Automatic rollback | ⚙️ Implemented, failure testing pending |
+| Release automation | ⚙️ Configured, execution verification pending |
 
-> Update the 🔄 rows to ✅ once each item is verified in your repository.
+---
+
+## 📸 Screenshots
+
+Real output from the running pipeline and AWS environment.
+
+### 🌐 Live application on EC2
+
+<img src="docs/images/deployed-app.png" alt="Deployed application running on EC2 showing the health status and SonarQube metrics" width="100%">
+
+### ☁️ AWS infrastructure
+
+| EC2 instance | Systems Manager managed node |
+|:---:|:---:|
+| <img src="docs/images/ec2-instance.png" alt="EC2 instance running"> | <img src="docs/images/ssm-managed-node.png" alt="SSM managed node online"> |
+| Instance running with all status checks passed | Instance registered and **Online** in Fleet Manager, used for SSM deployments |
+
+### 📦 Container registries
+
+| Amazon ECR: latest builds | Amazon ECR: release tag |
+|:---:|:---:|
+| <img src="docs/images/ecr-images-latest.png" alt="ECR images tagged with git SHA and latest"> | <img src="docs/images/ecr-images-release.png" alt="ECR images including v1.0.2 release tag"> |
+| Images tagged with the Git SHA and `latest` | Earlier images, including the `v1.0.2` release tag |
+
+<img src="docs/images/docker-hub.png" alt="Docker Hub repository showing published tags" width="70%">
+
+**Docker Hub:** `latest` and SHA-tagged images published by the pipeline.
+
+### 🔍 Code quality
+
+<img src="docs/images/sonarqube-summary.png" alt="SonarQube Cloud summary for the main branch" width="100%">
+
+**SonarQube Cloud:** analysis of `main` with Reliability A, Maintainability A, 88.9% coverage and 0.0% duplication.
+
+### ⚙️ GitHub Actions history
+
+<details open>
+<summary><b>Recent runs: CI, production deployment and rollback work</b></summary>
+
+<img src="docs/images/actions-history-rollback.png" alt="GitHub Actions runs for CI Pipeline and Production Deployment" width="100%">
+
+</details>
+
+<details>
+<summary><b>Earlier runs: Docker Hub, ECR, SSM deployment and versioned releases</b></summary>
+
+<img src="docs/images/actions-history-releases.png" alt="GitHub Actions runs including Release workflow for v1.0.0, v1.0.1 and v1.0.2" width="100%">
+
+</details>
 
 ---
 
 ## 🧠 Challenges and Learnings
 
-- **Pipeline design:** triggers, job dependencies, environment variables and runner behaviour
-- **Image management:** tagging strategy and registry authentication
-- **SonarQube setup:** organization/project keys and token handling
-- **AWS identity:** OIDC federation, IAM trust policies and least privilege
-- **Cloud deployment:** moving from "works locally" to a running container on EC2
+| Challenge | What I learned / implemented |
+|---|---|
+| CI pipeline failures | Debugged dependency, Python version and test configuration issues |
+| Docker image management | Tagged images with Git SHA and semantic versions |
+| SonarQube integration | Configured static analysis and worked towards passing the quality gate |
+| AWS authentication | Implemented GitHub OIDC federation to avoid long-lived credentials |
+| EC2 deployment | Used SSM Run Command to deploy containers remotely |
+| Secret management | Retrieved production secrets securely from Parameter Store |
+| Deployment reliability | Added health checks and rollback logic |
+| Troubleshooting | Debugged GitHub Actions, IAM permissions, ECR auth and deploy failures |
 
-**Key takeaway:** individual DevOps tools become powerful when chained into one automated delivery workflow.
+### Key takeaways
+
+- CI/CD is more than automating builds: it covers testing, security, deployment and recovery.
+- Image tagging makes deployments traceable and reproducible.
+- OIDC is a safer way for CI/CD systems to access cloud resources.
+- Health checks and rollback improve deployment reliability.
+- Troubleshooting failures is an essential part of building production-oriented infrastructure.
 
 ---
 
 ## 🗺️ Roadmap
 
-- [ ] Fully automated deployment to AWS EC2
 - [ ] Infrastructure as Code with **Terraform**
-- [ ] Kubernetes orchestration (EKS)
-- [ ] Monitoring and alerts with **Amazon CloudWatch**
-- [ ] Automated rollback on failed deployments
-- [ ] Container vulnerability scanning (Trivy / ECR scanning)
-- [ ] Deployment notifications (Slack / email)
-- [ ] Multi-environment deployments (dev, staging, prod)
-- [ ] Improved pipeline observability and failure reporting
+- [ ] Kubernetes orchestration with **Amazon EKS**
+- [ ] Monitoring and alerting with **Prometheus and Grafana**
+- [ ] Distributed tracing with **OpenTelemetry**
+- [ ] Container vulnerability scanning with **Trivy**
+- [ ] Multi-environment deployments (dev, staging, production)
+- [ ] Zero-downtime deployment strategy
+- [ ] Failure-injection testing for automated rollback
+- [ ] Deployment notifications and improved observability
 
 ---
 
 ## 🤝 Contributing
 
-Contributions, issues and feature ideas are welcome.
+Contributions, issues and suggestions are welcome.
 
 1. Fork the repository
-2. Create a branch: `git checkout -b feature/your-feature`
-3. Commit: `git commit -m "feat: add your feature"`
-4. Push: `git push origin feature/your-feature`
+2. Create a feature branch
+3. Commit your changes
+4. Push the branch
 5. Open a Pull Request
-
----
-
-## 📄 License
-
-Distributed under the **MIT License**. Add a `LICENSE` file to the repository root to activate the badge.
 
 ---
 
@@ -428,7 +577,6 @@ Cloud Computing · DevOps · Infrastructure Automation · AWS · CI/CD
 
 **Build → Test → Containerize → Deploy → Automate**
 
-⭐ If you found this project useful, consider giving it a star!
+⭐ If you find this project useful, consider giving the repository a star!
 
 </div>
-<!-- Trigger CI to verify SonarQube Cloud integration -->
