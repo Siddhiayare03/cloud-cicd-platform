@@ -1,3 +1,4 @@
+
 name: Production Deployment
 
 on:
@@ -20,14 +21,16 @@ jobs:
 
     steps:
       - name: Validate Version
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
-          if [[ ! "${{ inputs.version }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "Invalid version format."
             echo "Use format: v1.0.2"
             exit 1
           fi
 
-          echo "Deploying version: ${{ inputs.version }}"
+          echo "Deploying version: $VERSION"
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -35,10 +38,11 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ap-south-1
 
-
       - name: Deploy Release to EC2
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
-          VERSION="${{ inputs.version }}"
+          VERSION="$VERSION"
           IMAGE="443286885922.dkr.ecr.ap-south-1.amazonaws.com/cloud-cicd-platform:${VERSION}"
 
           echo "========================================"
@@ -61,8 +65,15 @@ jobs:
             docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
 
             if [ "$BACKUP_EXISTS" = true ]; then
-              docker rename "$BACKUP" "$CONTAINER"
-              docker start "$CONTAINER"
+              if ! docker rename "$BACKUP" "$CONTAINER"; then
+                echo "ERROR: Could not restore previous container name."
+                return 1
+              fi
+
+              if ! docker start "$CONTAINER"; then
+                echo "ERROR: Could not start previous container."
+                return 1
+              fi
 
               echo "Previous container restored."
 
@@ -71,15 +82,17 @@ jobs:
                   echo "Rollback health check passed."
                   return 0
                 fi
+
+                echo "Rollback attempt $attempt failed."
                 sleep 5
               done
 
-              echo "WARNING: Previous container was restored but health check failed."
+              echo "WARNING: Previous container restored but health check failed."
+              return 1
             else
               echo "No previous container was available to restore."
+              return 1
             fi
-
-            return 1
           }
 
           echo "Logging in to Amazon ECR..."
@@ -106,8 +119,19 @@ jobs:
 
           if docker inspect "$CONTAINER" >/dev/null 2>&1; then
             echo "Preserving currently running container..."
-            docker stop "$CONTAINER"
-            docker rename "$CONTAINER" "$BACKUP"
+
+            if ! docker stop "$CONTAINER"; then
+              echo "ERROR: Could not stop the existing container."
+              docker start "$CONTAINER" || true
+              exit 1
+            fi
+
+            if ! docker rename "$CONTAINER" "$BACKUP"; then
+              echo "ERROR: Could not preserve the existing container."
+              docker start "$CONTAINER" || true
+              exit 1
+            fi
+
             BACKUP_EXISTS=true
           fi
 
@@ -167,6 +191,7 @@ jobs:
             '{commands: [$script | gsub("__IMAGE__"; $image)]}')
 
           COMMAND_ID=$(aws ssm send-command \
+            --region ap-south-1 \
             --document-name "AWS-RunShellScript" \
             --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
             --parameters "$PARAMS" \
@@ -176,10 +201,12 @@ jobs:
           echo "SSM Command ID: $COMMAND_ID"
 
           aws ssm wait command-executed \
+            --region ap-south-1 \
             --command-id "$COMMAND_ID" \
-            --instance-id "${{ secrets.EC2_INSTANCE_ID }}"
+            --instance-id "${{ secrets.EC2_INSTANCE_ID }}" || true
 
           STATUS=$(aws ssm get-command-invocation \
+            --region ap-south-1 \
             --command-id "$COMMAND_ID" \
             --instance-id "${{ secrets.EC2_INSTANCE_ID }}" \
             --query "Status" \
@@ -191,14 +218,14 @@ jobs:
             echo "Production deployment failed."
 
             aws ssm get-command-invocation \
+              --region ap-south-1 \
               --command-id "$COMMAND_ID" \
               --instance-id "${{ secrets.EC2_INSTANCE_ID }}"
 
             exit 1
           fi
 
-
           echo "========================================"
-          echo "✅ PRODUCTION DEPLOYMENT SUCCESSFUL"
+          echo "PRODUCTION DEPLOYMENT SUCCESSFUL"
           echo "========================================"
           echo "Version deployed: $VERSION"
