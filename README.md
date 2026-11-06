@@ -12,7 +12,7 @@ A Flask app delivered from GitHub to **AWS EC2** with **GitHub Actions, Docker, 
 ![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?logo=docker&logoColor=white)
 ![AWS](https://img.shields.io/badge/AWS-ECR_%7C_EC2_%7C_SSM-FF9900?logo=amazonaws&logoColor=white)
 
-<img src="C:\Users\Siddhi Ayare\Downloads\docs-images\docs\images\deployed-app.png" alt="Application deployed on EC2" width="100%">
+<img src="docs/images/deployed-app.png" alt="Application deployed on EC2" width="100%">
 
 </div>
 
@@ -151,16 +151,15 @@ SonarQube Cloud analyses every push (config in `sonar-project.properties`, token
 |:---:|:---:|
 | <img src="docs/images/ecr-images-latest.png" alt="ECR latest images"> | <img src="docs/images/ecr-images-release.png" alt="ECR release images"> |
 
-<img src="docs/images/docker-hub.png" alt="Docker Hub tags" width="70%">
+| ECR: Docker-hub images | Docker |
+|:---:|:---:|
+| <img src="docs/images/docker-hub.png" alt="Docker Hub tags" width="70%"> |
 
 ---
 
 ## 🔁 Production Deploy and Rollback
 
 A manually triggered workflow takes a version (e.g. `v1.0.2`), pulls it from ECR, keeps the current container as a backup, starts the new one and checks `/health`. On success the backup is removed. On failure the new container is removed and the previous one restored.
-
-> [!IMPORTANT]
-> Rollback is implemented but has **not yet been failure-tested**. Replacing the container can cause brief downtime.
 
 ---
 
