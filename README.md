@@ -36,6 +36,7 @@ Tagged releases (`vX.Y.Z`) build versioned images and a GitHub Release. A separa
 
 ## 🏗️ Architecture
 
+<img src="docs/images/architecture.png" alt="Cloud CI/CD architecture diagram" width="100%">
 
 ```mermaid
 flowchart LR
@@ -152,9 +153,9 @@ SonarQube Cloud analyses every push (config in `sonar-project.properties`, token
 |:---:|:---:|
 | <img src="docs/images/ecr-images-latest.png" alt="ECR latest images"> | <img src="docs/images/ecr-images-release.png" alt="ECR release images"> |
 
-| ECR: Docker-hub images |
+| Docker-hub | Images |
 |:---:|:---:|
-| <img src="docs/images/docker-hub.png" alt="Docker Hub tags" width="70%"> |
+| <img src="docs/images/docker-hub.png" alt="Docker Hub tags" width="70%"> | <img src="docs/images/docker-hub.png" alt="ECR release images"> |
 
 ---
 
