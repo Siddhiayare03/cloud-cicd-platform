@@ -12,7 +12,7 @@ A Flask app delivered from GitHub to **AWS EC2** with **GitHub Actions, Docker, 
 ![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?logo=docker&logoColor=white)
 ![AWS](https://img.shields.io/badge/AWS-ECR_%7C_EC2_%7C_SSM-FF9900?logo=amazonaws&logoColor=white)
 
-<img src="docs/images/deployed-app.png" alt="Application deployed on EC2" width="100%">
+<img src="C:\Users\Siddhi Ayare\Downloads\docs-images\docs\images\deployed-app.png" alt="Application deployed on EC2" width="100%">
 
 </div>
 
