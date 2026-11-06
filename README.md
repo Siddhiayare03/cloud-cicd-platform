@@ -182,7 +182,7 @@ Never commit tokens, keys or credentials.
 | Parameter Store secret retrieval | ✅ Implemented |
 | Tag-based release workflow (v1.0.0 to v1.0.2) | ✅ Verified |
 | Manual production deploy workflow | ✅ Verified |
-| Automatic rollback | ⚙️ Implemented, failure testing pending |
+
 
 ---
 
