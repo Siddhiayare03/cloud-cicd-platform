@@ -153,7 +153,7 @@ SonarQube Cloud analyses every push (config in `sonar-project.properties`, token
 |:---:|:---:|
 | <img src="docs/images/ecr-images-latest.png" alt="ECR latest images"> | <img src="docs/images/ecr-images-release.png" alt="ECR release images"> |
 
-| Docker-hub | Images |
+| Docker-hub | |
 |:---:|:---:|
 | <img src="docs/images/docker-hub.png" alt="Docker Hub tags" width="70%"> | <img src="docs/images/docker-hub.png" alt="ECR release images"> |
 
